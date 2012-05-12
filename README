@@ -1,0 +1,18 @@
+Fordítás vázlatosan:
+	- qmake -project
+	- qmake
+	- <projektnév>.pro fájlhoz hozzáadni a következő sort:
+		LIBS += -lxapian -lQtDBus -lapt-pkg
+	- make
+
+A workerdbus.h és workerdbus.cpp generálása az org.kubuntu.qaptworker.xml fájlból:
+	- a következő parancs meghívásával:
+		qdbusxml2cpp -v -c OrgKubuntuQaptworkerInterface -p workerdbus.h:workerdbus.cpp org.kubuntu.qaptworker.xml
+
+---------- TODO -----------
+- A toolbarban a tulajdonságok gomb kiszűrkítése ha nincs kiválasztott sor.
+- A keresés megvalósítása a backend-es kereséssel (Xapian)
+
++ fv a csomagok hozzáadásához és törléséhez a modelben
++ kijelölések betöltése fájlból loadFromFile() fv-ben hozzáadni
+  azokat a csomagokat a kijelölés listához amiket betöltöttünk a fájlból
