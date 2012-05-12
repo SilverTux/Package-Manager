@@ -3,6 +3,7 @@
 //Qt
 #include <QLabel>
 #include <QProgressBar>
+#include <QScrollBar>
 
 CommitWidget::CommitWidget(QWidget *parent)
     : QWidget(parent)
@@ -26,6 +27,8 @@ CommitWidget::~CommitWidget()
 void CommitWidget::setLabelText(const QString &text)
 {
     m_commitBrowser->setText(m_commitBrowser->toPlainText() + "\n" + text);
+    QScrollBar *sb = m_commitBrowser->verticalScrollBar();
+    sb->setValue(sb->maximum());
 }
 
 void CommitWidget::setProgress(int percentage)

@@ -6,37 +6,28 @@
 #include <libqapt/globals.h>
 #include "Debconf/DebconfGui.h"
 
-class QAptHandler : public QObject
+class QAptHandler : public QApt::Backend
 {
   Q_OBJECT
 
   public:
-    QAptHandler();
+    static QAptHandler* getInstance();
     ~QAptHandler();
 
-    int packageCount(QApt::Package::State state);
-    int packageCount();
-    QApt::PackageList* availablePackages() const;
-    QApt::Package* package(const QString &name) const;
+    void updateBeginCache();
+    QApt::PackageList* availablePackages();
     void init();
-    QApt::PackageList markedPackages();
 
   public Q_SLOTS:
-    void cancelDownload();
     void commitChanges();
-
-  Q_SIGNALS:
-    void updateStatusBar();
-    void workerEvent(QApt::WorkerEvent event);
-    void downloadProgress(int percentage, int speed, int ETA);
-    void downloadMessage(int flag, const QString &message);
-    void commitProgress(const QString &message, int percentage);
+    void restoreBeginCacheState();
 
   private:
-    QApt::Backend *m_backend;
-    QApt::Package *m_package;
-    QApt::Group *m_group;
+    QAptHandler();
 
+    static QAptHandler *instance;
+
+    QList<int> m_beginState;
     DebconfKde::DebconfGui *m_debconfGui;
 
 };

@@ -1,24 +1,61 @@
-#include "pkglistmodel.h"
 #include <QDebug>
 
-pkgListModel::pkgListModel(QAbstractTableModel *parent) : QAbstractTableModel(parent)
+#include "pkglistmodel.h"
+
+int PkgListModel::m_sortByColumn=0;
+
+bool PkgListModel::pairLessThan(const QPair<bool, QList<QString> > &pair1,
+                                const QPair<bool, QList<QString> > &pair2)
+{
+    switch (m_sortByColumn)
+    {
+    case 0:
+        return pair1.first < pair2.first;
+    case 1:
+        return pair1.second.at(0) < pair2.second.at(0);
+    case 2:
+        return pair1.second.at(1) < pair2.second.at(1);
+    case 3:
+        return pair1.second.at(2) < pair2.second.at(2);
+    }
+}
+
+bool PkgListModel::pairGreaterThan(const QPair<bool, QList<QString> > &pair1,
+                                   const QPair<bool, QList<QString> > &pair2)
+{
+    switch (m_sortByColumn)
+    {
+    case 0:
+        return pair1.first > pair2.first;
+    case 1:
+        return pair1.second.at(0) > pair2.second.at(0);
+    case 2:
+        return pair1.second.at(1) > pair2.second.at(1);
+    case 3:
+        return pair1.second.at(2) > pair2.second.at(2);
+    }
+}
+
+PkgListModel::PkgListModel(QAbstractTableModel *parent) : QAbstractTableModel(parent)
 {
   m_data = new QList<QPair<bool, QList<QString> > >();
-  m_selected = new QList<QString>();
+  m_selectedInstall = new QList<QString>();
+  m_selectedRemove = new QList<QString>();
+  m_selectedUpgrade = new QList<QString>();
   m_installed = new QList<QString>();
 }
 
-pkgListModel::~pkgListModel()
+PkgListModel::~PkgListModel()
 {
 }
 
-int pkgListModel::rowCount(const QModelIndex &parent) const
+int PkgListModel::rowCount(const QModelIndex &parent) const
 {
   Q_UNUSED(parent);
   return m_data->size();
 }
 
-int pkgListModel::columnCount(const QModelIndex &parent) const
+int PkgListModel::columnCount(const QModelIndex &parent) const
 {
   Q_UNUSED(parent);
 
@@ -28,7 +65,7 @@ int pkgListModel::columnCount(const QModelIndex &parent) const
       return 4;
 }
 
-QVariant pkgListModel::data(const QModelIndex &index, int role) const
+QVariant PkgListModel::data(const QModelIndex &index, int role) const
 {
   if (!index.isValid())
       return QVariant();
@@ -39,14 +76,14 @@ QVariant pkgListModel::data(const QModelIndex &index, int role) const
   if (role == Qt::BackgroundRole) {
       QModelIndex temp = index.model()->index(index.row(),1);
 
-      //Ha kijelölünk egy csomagot és nincs telepítve akkor zölddel jelöljük a sort
-      //ha telepítve van akkor pirossal, mert eltávolításra jelöltük ki
-      if (m_selected->indexOf(temp.model()->data(temp).toString()) != -1 &&
-          m_installed->indexOf(temp.model()->data(temp).toString()) == -1)
+      //If we select a package and it isn't installed than we mark the row as green
+      //If it installed we mark as red, because we select it to remove
+      if (m_selectedInstall->indexOf(temp.model()->data(temp).toString()) != -1)
           return QVariant(QColor(Qt::green));
-      else if (m_selected->indexOf(temp.model()->data(temp).toString()) != -1 &&
-               m_installed->indexOf(temp.model()->data(temp).toString()) != -1)
+      else if (m_selectedRemove->indexOf(temp.model()->data(temp).toString()) != -1)
           return QVariant(QColor(Qt::red));
+      else if (m_selectedUpgrade->indexOf(temp.model()->data(temp).toString()) != -1)
+          return QVariant(QColor(Qt::yellow));
       
   }
 
@@ -73,37 +110,12 @@ QVariant pkgListModel::data(const QModelIndex &index, int role) const
   return QVariant();
 }
 
-bool pkgListModel::setData(const QModelIndex &index, const QVariant &value, int role)
+bool PkgListModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
-/*  if (role == Qt::EditRole)
-  {
-    for (int col = 0; col < columnCount(index.parent()); ++col)
-    {
-      QModelIndex sibling = index.sibling(index.row(),col);
-      setData(sibling, QColor(Qt::green), Qt::BackgroundColorRole);
-    }
-  }*/
-
-  if (index.column() == 0) {
-      int row = index.row();
-      (*m_data)[row].first = value.toBool();
-      return true;
-  }
-  else 
       return QAbstractTableModel::setData(index, value, role);
 }
 
-Qt::ItemFlags pkgListModel::flags(const QModelIndex &index) const
-{
-  Qt::ItemFlags flag = QAbstractTableModel::flags(index);
-  if (index.column() == 0) {
-      flag |= Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsUserCheckable | Qt::ItemIsEnabled;
-  }
-
-  return flag;
-}
-
-QVariant pkgListModel::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant PkgListModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
   if (role != Qt::DisplayRole)
       return QVariant();
@@ -111,7 +123,7 @@ QVariant pkgListModel::headerData(int section, Qt::Orientation orientation, int 
   if (orientation == Qt::Horizontal) {
       switch (section) {
          case 0:
-             return trUtf8("Állapot");
+             return trUtf8("Á");
 
          case 1:
              return trUtf8("Név");
@@ -129,13 +141,33 @@ QVariant pkgListModel::headerData(int section, Qt::Orientation orientation, int 
   return QVariant();
 }
 
-void pkgListModel::setPkgList(QApt::PackageList* pkgList)
+void PkgListModel::sort(int column, Qt::SortOrder order)
+{
+    m_sortByColumn = column;
+
+    //If the arrow in the header is pointing up we get
+    //Qt::DescendingOrder instead of Qt::Ascending order so
+    //I swapped the two qSort-s
+    switch(order)
+    {
+    case Qt::AscendingOrder:
+        qSort(m_data->begin(),m_data->end(),pairGreaterThan);
+        break;
+    case Qt::DescendingOrder:
+        qSort(m_data->begin(),m_data->end(),pairLessThan);
+        break;
+    }
+
+    Q_EMIT dataSorted();
+}
+
+void PkgListModel::setPkgList(QApt::PackageList* pkgList)
 {
   reset();
   m_data->clear();
   m_installed->clear();
 
-  //Üres csomaglistára nem csinálunk semmit
+  //If the package list is empty we do nothing
   if (pkgList->size() == 0)
       return;
 
@@ -153,13 +185,6 @@ void pkgListModel::setPkgList(QApt::PackageList* pkgList)
     temp->second.push_back(*pkg_version);
     temp->second.push_back(*pkg_shortDescription);
 
-    /*for (int i = 0; i < m_data->size(); ++i)
-    {
-      if (m_data->size() != 0 && m_data->at(i).second.at(1) >= *pkg_name)
-          m_data->insert(i,*temp);
-    }
-
-    if (m_data->size() == 0)*/
     m_data->push_back(*temp);
 
 
@@ -168,39 +193,60 @@ void pkgListModel::setPkgList(QApt::PackageList* pkgList)
   }
 }
 
-QList<QString>& pkgListModel::selectedPkgs()
+QList<QString>& PkgListModel::selectedPkgs()
 {
   QList<QString> *result = new QList<QString>();
-  *result = *m_selected;
+  *result = *m_selectedInstall;
 
   return *result;
 }
 
-void pkgListModel::clearSelected()
+void PkgListModel::clearSelected()
 {
-  m_selected->clear();
+  m_selectedInstall->clear();
+  m_selectedRemove->clear();
+  m_selectedUpgrade->clear();
   
   Q_EMIT selectedListCleared();
 }
 
-bool pkgListModel::isSelected(QString pkgName)
+bool PkgListModel::isSelected(QString pkgName) const
 {
-  if (m_selected->indexOf(pkgName) != -1)
+  if (m_selectedInstall->indexOf(pkgName) != -1 ||
+      m_selectedRemove->indexOf(pkgName) != -1 ||
+      m_selectedUpgrade->indexOf(pkgName) != -1)
       return true;
   else
       return false;
 }
 
-void pkgListModel::addRemoveSelectedPkgs(QList<QString> pkgL)
+void PkgListModel::addSelectedPkgs(QList<QString> sInstall,
+                                   QList<QString> sRemove, QList<QString> sUpgrade)
 {
-  qDebug() << "itt" << pkgL.size();
+  qDebug() << "itt" << sInstall.size();
 
-  Q_FOREACH (QString name, pkgL) {
-    if (m_selected->indexOf(name) == -1)
-        m_selected->push_back(name);
-    else
-        m_selected->removeAt(m_selected->indexOf(name));
+  Q_FOREACH (QString name, sInstall) {
+    if (m_selectedInstall->indexOf(name) == -1)
+        m_selectedInstall->push_back(name);
   }
 
-//  Q_EMIT selectedListChanged();
+  Q_FOREACH (QString name, sRemove) {
+    if (m_selectedRemove->indexOf(name) == -1)
+        m_selectedRemove->push_back(name);
+  }
+
+  Q_FOREACH (QString name, sUpgrade) {
+    if (m_selectedUpgrade->indexOf(name) == -1)
+        m_selectedUpgrade->push_back(name);
+  }
+}
+
+void PkgListModel::removeSelectedPkg(QString name)
+{
+    if (m_selectedInstall->indexOf(name) != -1)
+        m_selectedInstall->removeAt(m_selectedInstall->indexOf(name));
+    else if (m_selectedRemove->indexOf(name) != -1)
+        m_selectedRemove->removeAt(m_selectedRemove->indexOf(name));
+    else if (m_selectedUpgrade->indexOf(name) != -1)
+        m_selectedUpgrade->removeAt(m_selectedUpgrade->indexOf(name));
 }

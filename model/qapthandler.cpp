@@ -1,62 +1,55 @@
 #include "qapthandler.h"
 
+QAptHandler *QAptHandler::instance=0;
+
 QAptHandler::QAptHandler()
 {
-  m_backend = new QApt::Backend();
-  m_backend->init();
+}
 
-  connect(m_backend, SIGNAL(packageChanged()), this, SIGNAL(updateStatusBar()));
-  connect(m_backend, SIGNAL(workerEvent(QApt::WorkerEvent)), this, SIGNAL(workerEvent(QApt::WorkerEvent)));
-  connect(m_backend, SIGNAL(downloadProgress(int, int, int)), 
-          this, SIGNAL(downloadProgress(int, int, int)));
-  connect(m_backend, SIGNAL(downloadMessage(int, const QString&)),
-            this, SIGNAL(downloadMessage(int, const QString&)));
-  connect(m_backend, SIGNAL(commitProgress(const QString&, int)),
-            this, SIGNAL(commitProgress(const QString&, int)));
+QAptHandler* QAptHandler::getInstance()
+{
+    //We shouldn't have more than one instance of this class because of apt Cache
+    if (!instance)
+        instance = new QAptHandler();
+
+    return instance;
 }
 
 QAptHandler::~QAptHandler()
 {
 }
 
-int QAptHandler::packageCount(QApt::Package::State state)
+void QAptHandler::updateBeginCache()
 {
-  return m_backend->packageCount(state);
+    m_beginState = currentCacheState();
 }
 
-int QAptHandler::packageCount()
+QApt::PackageList* QAptHandler::availablePackages()
 {
-  return m_backend->packageCount();
-}
+    QApt::PackageList *result = new QApt::PackageList();
+    *result = QApt::Backend::availablePackages();
 
-QApt::PackageList* QAptHandler::availablePackages() const
-{
-  QApt::PackageList *result = new QApt::PackageList();
-  *result = m_backend->availablePackages();
-  return result;
-}
-
-QApt::Package* QAptHandler::package(const QString &name) const
-{
-  return m_backend->package(name);
+    return result;
 }
 
 void QAptHandler::init()
 {
-  m_backend->init();
-}
-
-QApt::PackageList QAptHandler::markedPackages()
-{
-  return m_backend->markedPackages();
-}
-
-void QAptHandler::cancelDownload()
-{
-  m_backend->cancelDownload();
+    QApt::Backend::init();
+    //We save the cache state after initialization
+    m_beginState = currentCacheState();
 }
 
 void QAptHandler::commitChanges()
 {
-  m_backend->commitChanges();
+  m_debconfGui = new DebconfKde::DebconfGui("/tmp/qapt-sock");
+  m_debconfGui->connect(m_debconfGui, SIGNAL(activated()), m_debconfGui, SLOT(show()));
+  m_debconfGui->connect(m_debconfGui, SIGNAL(deactivated()), m_debconfGui, SLOT(hide()));
+
+  QApt::Backend::commitChanges();
 }
+
+void QAptHandler::restoreBeginCacheState()
+{
+    restoreCacheState(m_beginState);
+}
+

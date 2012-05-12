@@ -8,82 +8,100 @@
 #include <QListView>
 #include <QStandardItemModel>
 #include <QPushButton>
+#include <QToolBar>
+#include <QMenuBar>
+#include <QProgressBar>
 
 #include "view/pkglistwidget.h"
 #include "view/cacheupdatewidget.h"
 #include "view/commitwidget.h"
 #include "view/dependencywidget.h"
+#include "view/pkgpropertywidget.h"
+#include "view/helpwidget.h"
+#include "view/aboutwidget.h"
 #include "model/pkglistmodel.h"
 #include "model/qapthandler.h"
 #include "model/installeddelegate.h"
-#include "model/Debconf/DebconfGui.h"
 
-/*#include <libqapt/globals.h>
-#include <libqapt/backend.h>
-#include <libqapt/package.h>*/
-
-class mainWindow : public QMainWindow
+class MainWindow : public QMainWindow
 {
   Q_OBJECT
 
   public:
-    mainWindow(QWidget *parent = 0);
-    ~mainWindow();
+    MainWindow(QWidget *parent = 0);
+    ~MainWindow();
 
-    void setDescriptions();
-    void setSectionList();
-
-  public Q_SLOTS:
+  protected Q_SLOTS:
     void updateStatusBar();
     void workerEvent(QApt::WorkerEvent event);
+    void errorOccurred(QApt::ErrorCode error, const QVariantMap &details);
+    void warningOccurred(QApt::WarningCode warning, const QVariantMap &details);
+    void questionOccurred(QApt::WorkerQuestion question, const QVariantMap &details);
     void commitAction();
-    void updateDownloadProgress(int percentage, int speed, int ETA);
-    void updateDownloadMessage(int flag, const QString &message);
     void updateCommitProgress(const QString &message, int percentage);
     void updateLabels(QString name);
     void showPropertyWidget();
     void filterPkgList(const QModelIndex &index);
     void filterPkgListBySearch();
-    void markedPkgsClear();
     void undoSelections();
     void addRemovePkg(QString name);
+    void saveToFile();
+    void loadFromFile();
+    void addPkgsToSelected();
+    void removePkgFromSelected(QString pkgName);
+    void packageChanged();
+    void quitSlot();
 
   private:
-    pkgListWidget *pkgList;
-    pkgListModel *pkgModel;
+    void init();
+    void setupUi();
+    void setupConnections();
+    void setDescriptions();
+    void setSectionList();
+    void setUiEnabled(bool enabled);
+    void setEditActionsEnabled();
+
+    PkgListWidget *m_pkgList;
+    PkgListModel *m_pkgModel;
     CacheUpdateWidget *m_cacheUpdateWidget;
     CommitWidget *m_commitWidget;
     DependencyWidget *m_dependencyWidget;
-    InstalledDelegate *idelegate;
+    PkgPropertyWidget *m_packagePropertyWidget;
+    HelpWidget *m_helpWidget;
+    AboutWidget *m_aboutWidget;
+    InstalledDelegate *m_idelegate;
 
     QStandardItemModel *m_sectionModel;
 
-    QWidget *m_packageDescriptionWidget;
     QWidget *m_packageLongDescriptionWidget;
     QLabel *m_packageCountLabel;
     QLabel *m_changedPackagesLabel;
-
-    QLabel *m_nameLabel; 
-    QLabel *m_sectionLabel;
-    QLabel *m_originLabel;
-    QLabel *m_installedSizeLabel;
-    QLabel *m_maintainerLabel;
-    QLabel *m_sourceLabel;
-    QLabel *m_versionLabel;
-    QLabel *m_packageSizeLabel;
-    QLabel *m_shortDescriptionLabel;
-    QLineEdit *m_longDescriptionLabel;
     QTextBrowser *m_longDescriptionBrowser;
 
     QListView *m_sectionList;
     QLineEdit *m_searchField;
     QPushButton *m_applySearchButton;
     QPushButton *m_applyButton;
+    QPushButton *m_propertyButton;
     QPushButton *m_undoSelectionsButton;
+
+    QToolBar *m_toolBar;
+    QMenuBar *m_menuBar;
+
+    QMenu *m_file;
+    QMenu *m_edit;
+    QMenu *m_help;
+    QAction *m_helpAct;
+    QAction *m_aboutAct;
+    QAction *m_redoAct;
+    QAction *m_undoAct;
+    QAction *m_saveAct;
+    QAction *m_loadAct;
+    QAction *m_quitAct;
+
+    bool m_canExit;
  
     QAptHandler *m_handler;
-
-    DebconfKde::DebconfGui *m_debconfGui;
 };
 
 #endif //MAINWINDOW_H

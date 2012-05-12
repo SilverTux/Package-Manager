@@ -21,9 +21,11 @@ public:
 
     ~CacheUpdateWidget();
 
+public Q_SLOTS:
     void clear();
     void addItem(const QString &message);
-    void setTotalProgress(int percentage, int speed, int ETA);
+    void updateDownloadProgress(int percentage, int speed, int ETA);
+    void updateDownloadMessage(int flag, const QString &message);
     void setHeaderText(const QString &text);
 
 private:

@@ -7,18 +7,19 @@
 #include <QPoint>
 #include <QModelIndex>
 
-class pkgListWidget : public QTableView
+class PkgListWidget : public QTableView
 {
   Q_OBJECT
 
   public:
-    pkgListWidget(QWidget *parent = 0);
-    ~pkgListWidget();
+    PkgListWidget(QWidget *parent = 0);
+    ~PkgListWidget();
 
   public Q_SLOTS:
     void rowClicked(const QModelIndex &index);
     void rowDoubleClicked(const QModelIndex &index);
     void rightClickedCell(QPoint point);
+    void undoSelection();
     void selectedForInstall();
     void selectedForRemove();
 
@@ -26,11 +27,12 @@ class pkgListWidget : public QTableView
     void clickedRow(QString pkgName);
     void doubleClickedRow(QString pkgName);
     void propertyClicked();
+    void undoClicked(QString pkgName);
     void installClicked(QString pkgName);
     void removeClicked(QString pkgName);
 
   private:
-    QModelIndex index;
+    QModelIndex m_index;
 };
 
 #endif //PKGLISTWIDGET_H

@@ -4,15 +4,19 @@
 #include <QtGui/QListView>
 #include <QtGui/QProgressBar>
 #include <QtGui/QPushButton>
+#include <QtGui/QVBoxLayout>
 #include <QStandardItemModel>
 
 #include <QIcon>
 #include <QLocale>
 #include <QDebug>
 
+#include <libqapt/globals.h>
+
 CacheUpdateWidget::CacheUpdateWidget(QWidget *parent)
     : QWidget(parent)
 {
+    QVBoxLayout *layout = new QVBoxLayout();
     m_headerLabel = new QLabel();
 
     m_downloadView = new QListView();
@@ -25,10 +29,17 @@ CacheUpdateWidget::CacheUpdateWidget(QWidget *parent)
 
     m_cancelButton = new QPushButton();
     m_cancelButton->setText(trUtf8("Mégse"));
-    m_cancelButton->setIcon(QIcon(""));
 
-    setWindowTitle(trUtf8("Cache Update"));
+    setWindowTitle(trUtf8("Letöltés"));
     connect(m_cancelButton, SIGNAL(clicked()), this, SLOT(cancelButtonPressed()));
+
+    layout->addWidget(m_headerLabel);
+    layout->addWidget(m_downloadView);
+    layout->addWidget(m_downloadLabel);
+    layout->addWidget(m_totalProgress);
+    layout->addWidget(m_cancelButton);
+
+    setLayout(layout);
 }
 
 CacheUpdateWidget::~CacheUpdateWidget()
@@ -54,7 +65,7 @@ void CacheUpdateWidget::addItem(const QString &message)
     m_downloadView->scrollTo(m_downloadModel->indexFromItem(n));
 }
 
-void CacheUpdateWidget::setTotalProgress(int percentage, int speed, int ETA)
+void CacheUpdateWidget::updateDownloadProgress(int percentage, int speed, int ETA)
 {
     m_totalProgress->setValue(percentage);
 
@@ -62,7 +73,7 @@ void CacheUpdateWidget::setTotalProgress(int percentage, int speed, int ETA)
     if (speed < 0) {
         downloadSpeed = trUtf8("Ismeretlen sebesség");
     } else {
-        downloadSpeed = trUtf8("Letöltési sebesség: %1/s");
+        downloadSpeed = trUtf8("Letöltési sebesség: %1/s").arg(speed);
     }
 
     QString timeRemaining;
@@ -72,9 +83,29 @@ void CacheUpdateWidget::setTotalProgress(int percentage, int speed, int ETA)
         // If ETA is less than zero or bigger than 2 weeks
         timeRemaining = trUtf8(" - Hátralévő idő ismeretlen");
     } else {
-        timeRemaining = " - %1/s";
+        timeRemaining = QString(" - %1/s").arg(ETA);
     }
     m_downloadLabel->setText(downloadSpeed + timeRemaining);
+}
+
+void CacheUpdateWidget::updateDownloadMessage(int flag, const QString &message)
+{
+    QString fullMessage;
+
+    switch (flag) {
+      case QApt::DownloadFetch:
+          fullMessage = QString("Letöltés: %1").arg(message);
+          break;
+      case QApt::HitFetch:
+          fullMessage = QString("Ellenőrzés: %1").arg(message);
+          break;
+      case QApt::IgnoredFetch:
+          fullMessage = QString("Elvet: %1").arg(message);
+          break;
+      default:
+          fullMessage = message;
+    }
+    addItem(fullMessage);
 }
 
 void CacheUpdateWidget::cancelButtonPressed()

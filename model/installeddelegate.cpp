@@ -1,8 +1,9 @@
-#include "installeddelegate.h"
 #include <QCheckBox>
 #include <QApplication>
 #include <QStyleOptionViewItemV4>
 #include <QRect>
+
+#include "installeddelegate.h"
 
 InstalledDelegate::InstalledDelegate(QObject *parent) : QItemDelegate(parent)
 {
@@ -16,12 +17,11 @@ void InstalledDelegate::paint(QPainter *painter,const QStyleOptionViewItem &opti
   myoption.displayAlignment = Qt::AlignHCenter | Qt::AlignVCenter;
   drawCheck(painter,myoption,myoption.rect,
             temp ? Qt::Checked : Qt::Unchecked);
-//  drawDisplay(painter,myoption,myoption.rect,text);
   drawFocus(painter,myoption,myoption.rect);
 
 }
 
-QWidget* InstalledDelegate::createEditor(QWidget *parent,const QStyleOptionViewItem &option, const QModelIndex &index) const
+/*QWidget* InstalledDelegate::createEditor(QWidget *parent,const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
 //  QMessageBox::warning(0,"",QString::number(index.row()));
   QCheckBox *cEdit = new QCheckBox(parent);
@@ -49,7 +49,7 @@ void InstalledDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
   QCheckBox *cEdit = qobject_cast<QCheckBox*>(editor);
 
   model->setData(index, QVariant(cEdit->isChecked()));
-}
+}*/
 
 void InstalledDelegate::updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
